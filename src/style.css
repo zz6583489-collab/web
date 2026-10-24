@@ -1,0 +1,13 @@
+:root {
+  font-family: Inter, 'Noto Sans SC', system-ui, sans-serif;
+  color: #263445;
+  background: #f5f7fb;
+}
+
+body {
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
