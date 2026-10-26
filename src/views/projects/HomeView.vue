@@ -11,6 +11,7 @@ const auth = useAuthStore()
 const projects = ref<ProjectView[]>([])
 const page = ref(1)
 const total = ref(0)
+const statusFilter = ref<'ACTIVE' | 'ARCHIVED' | ''>('')
 const loading = ref(false)
 const submitting = ref(false)
 const dialogOpen = ref(false)
@@ -22,7 +23,7 @@ async function loadProjects(nextPage = page.value): Promise<void> {
   loading.value = true
   errorMessage.value = ''
   try {
-    const result = await listProjects(nextPage)
+    const result = await listProjects(nextPage, statusFilter.value || undefined)
     projects.value = result.items
     page.value = result.page
     total.value = result.total
@@ -51,6 +52,11 @@ async function submitProject(): Promise<void> {
   } finally {
     submitting.value = false
   }
+}
+
+async function clearFilter(): Promise<void> {
+  statusFilter.value = ''
+  await loadProjects(1)
 }
 
 async function logout(): Promise<void> {
@@ -84,6 +90,14 @@ onMounted(() => {
       </div>
     </header>
     <el-alert v-if="errorMessage" :title="errorMessage" type="error" :closable="false" />
+    <div class="filter-row">
+      <el-select v-model="statusFilter" clearable placeholder="全部状态">
+        <el-option label="活跃" value="ACTIVE" />
+        <el-option label="已归档" value="ARCHIVED" />
+      </el-select>
+      <el-button type="primary" @click="loadProjects(1)">筛选</el-button>
+      <el-button @click="clearFilter">清空</el-button>
+    </div>
     <el-card v-loading="loading">
       <el-table :data="projects" empty-text="暂无项目，创建第一个项目吧">
         <el-table-column prop="name" label="项目" min-width="220" />
@@ -108,7 +122,7 @@ onMounted(() => {
         @current-change="loadProjects"
       />
     </el-card>
-    <el-dialog v-model="dialogOpen" title="创建项目" width="480px">
+    <el-dialog v-model="dialogOpen" title="创建项目" width="min(480px, 92vw)">
       <el-form label-position="top" @submit.prevent="submitProject">
         <el-form-item label="项目名称"
           ><el-input v-model="name" maxlength="160" show-word-limit
@@ -150,5 +164,30 @@ onMounted(() => {
 .pager {
   margin-top: 20px;
   justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.filter-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.filter-row .el-select {
+  width: 180px;
+}
+@media (max-width: 720px) {
+  .page-shell {
+    margin: 16px auto;
+    padding: 0 16px;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-row {
+    flex-wrap: wrap;
+  }
+  .filter-row .el-select {
+    width: 100%;
+  }
 }
 </style>

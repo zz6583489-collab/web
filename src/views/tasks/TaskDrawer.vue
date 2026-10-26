@@ -30,6 +30,7 @@ const activityTotal = ref(0)
 const title = ref('')
 const description = ref('')
 const priority = ref<TaskPriority>('MEDIUM')
+const dueAt = ref<Date | null>(null)
 const assigneeId = ref('')
 const busy = ref(false)
 const errorMessage = ref('')
@@ -60,6 +61,7 @@ async function load(): Promise<void> {
     title.value = detail.title
     description.value = detail.description ?? ''
     priority.value = detail.priority
+    dueAt.value = detail.dueAt ? new Date(detail.dueAt) : null
     assigneeId.value = detail.assigneeId ?? ''
   } catch (error) {
     errorMessage.value = formatApiError(error)
@@ -75,6 +77,12 @@ async function save(): Promise<void> {
   if (canEditCore.value) {
     if (title.value.trim() !== current.title) input.title = title.value.trim()
     if (priority.value !== current.priority) input.priority = priority.value
+    const beforeDue = current.dueAt ? new Date(current.dueAt).getTime() : null
+    const afterDue = dueAt.value?.getTime() ?? null
+    if (beforeDue !== afterDue) {
+      if (dueAt.value) input.dueAt = dueAt.value.toISOString()
+      else input.clearDueAt = true
+    }
   }
   if (canEditDescription.value && description.value !== (current.description ?? ''))
     input.description = description.value
@@ -166,6 +174,13 @@ watch(
                 :label="member.displayName"
                 :value="member.userId" /></el-select
           ></el-form-item>
+          <el-form-item label="截止时间"
+            ><el-date-picker
+              v-model="dueAt"
+              type="datetime"
+              :disabled="!canEditCore"
+              placeholder="无截止时间"
+          /></el-form-item>
           <el-button
             v-if="canEditCore || canEditDescription || (projectOwner && projectActive)"
             type="primary"

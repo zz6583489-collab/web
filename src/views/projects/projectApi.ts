@@ -19,9 +19,12 @@ export interface MemberView {
   joinedAt: string
 }
 
-export async function listProjects(page = 1): Promise<PageResult<ProjectView>> {
+export async function listProjects(
+  page = 1,
+  status?: 'ACTIVE' | 'ARCHIVED',
+): Promise<PageResult<ProjectView>> {
   const response = await apiClient.get<ApiResponse<PageResult<ProjectView>>>('/projects', {
-    params: { page },
+    params: { page, status },
   })
   return response.data.data
 }

@@ -51,6 +51,25 @@ test('Vue login, project, and task actions call the live Spring Boot API', async
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}$`))
   await expect(page.getByRole('heading', { name: projectName })).toBeVisible()
 
+  await page.getByRole('button', { name: '← 返回项目' }).click()
+  await page.getByText('全部状态').click()
+  await page.getByRole('option', { name: '活跃' }).click()
+  const filteredProjects = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return url.pathname === '/api/v1/projects' && url.searchParams.get('status') === 'ACTIVE'
+  })
+  await page.getByRole('button', { name: '筛选', exact: true }).click()
+  expect(
+    (await (await filteredProjects).json()).data.items.some(
+      (item: { id: string }) => item.id === project.id,
+    ),
+  ).toBe(true)
+  await page
+    .getByRole('row', { name: new RegExp(projectName) })
+    .getByRole('button', { name: '查看' })
+    .click()
+  await expect(page.getByRole('heading', { name: projectName })).toBeVisible()
+
   await page.getByRole('button', { name: '创建任务' }).click()
   const taskDialog = page.getByRole('dialog', { name: '创建任务' })
   await taskDialog.getByRole('textbox', { name: '标题' }).fill('Web 联调任务')
@@ -68,17 +87,65 @@ test('Vue login, project, and task actions call the live Spring Boot API', async
   const task = (await createdTask.json()).data
   expect(task.assigneeId).toBe(me.data.id)
 
-  await page.getByRole('button', { name: '详情' }).click()
+  await page.getByRole('button', { name: '详情', exact: true }).click()
   await expect(page.getByRole('dialog', { name: '任务详情' })).toBeVisible()
   const transitionResponse = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname === `/api/v1/tasks/${task.id}/transitions` &&
       response.request().method() === 'POST',
   )
+  const statsResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === `/api/v1/projects/${project.id}/stats` &&
+      response.request().method() === 'GET',
+  )
   await page.getByRole('button', { name: '流转到 IN_PROGRESS' }).click()
   const moved = await transitionResponse
   expect(moved.status()).toBe(200)
   expect(moved.request().postDataJSON()).toMatchObject({ toStatus: 'IN_PROGRESS', version: '0' })
   await expect(page.getByText('状态：IN_PROGRESS · 版本：1')).toBeVisible()
+  const summary = await statsResponse
+  expect(summary.status()).toBe(200)
+  expect((await summary.json()).data).toMatchObject({ total: 1, inProgress: 1 })
+  await page
+    .getByRole('dialog', { name: '任务详情' })
+    .getByRole('button', { name: 'Close this dialog' })
+    .click()
+
+  await page.getByText('全部状态').click()
+  await page.getByRole('option', { name: '进行中' }).click()
+  const filteredTasks = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return (
+      url.pathname === `/api/v1/projects/${project.id}/tasks` &&
+      url.searchParams.get('status') === 'IN_PROGRESS'
+    )
+  })
+  await page.getByRole('button', { name: '筛选任务' }).click()
+  expect((await (await filteredTasks).json()).data.total).toBe(1)
+
+  await page.getByText('全部操作').click()
+  await page.getByRole('option', { name: '状态流转' }).click()
+  const filteredAudit = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return (
+      url.pathname === `/api/v1/projects/${project.id}/audit-logs` &&
+      url.searchParams.get('action') === 'TASK_STATUS_CHANGED'
+    )
+  })
+  await page.getByRole('button', { name: '筛选审计' }).click()
+  expect((await (await filteredAudit).json()).data.total).toBeGreaterThanOrEqual(1)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page.getByRole('heading', { name: projectName })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
+  const dashboardStats = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === `/api/v1/projects/${project.id}/stats`,
+  )
+  await page.getByRole('button', { name: '统计详情' }).click()
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/dashboard$`))
+  await expect(page.getByRole('heading', { name: '项目统计' })).toBeVisible()
+  expect((await (await dashboardStats).json()).data.total).toBe(1)
   expect(pageErrors).toEqual([])
 })

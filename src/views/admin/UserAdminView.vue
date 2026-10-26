@@ -112,7 +112,7 @@ onMounted(() => {
         @current-change="load"
       />
     </el-card>
-    <el-dialog v-model="dialogOpen" title="创建账号" width="480px" @closed="resetForm">
+    <el-dialog v-model="dialogOpen" title="创建账号" width="min(480px, 92vw)" @closed="resetForm">
       <el-form label-position="top" @submit.prevent="submit">
         <el-form-item label="用户名"><el-input v-model="username" maxlength="64" /></el-form-item>
         <el-form-item label="姓名"><el-input v-model="displayName" maxlength="100" /></el-form-item>
@@ -141,5 +141,17 @@ onMounted(() => {
 .pager {
   margin-top: 20px;
   justify-content: flex-end;
+  flex-wrap: wrap;
+}
+@media (max-width: 720px) {
+  .page-shell {
+    margin: 16px auto;
+    padding: 0 16px;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
 }
 </style>

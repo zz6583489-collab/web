@@ -38,17 +38,55 @@ export interface AuditView {
   createdAt: string
 }
 
-export async function listTasks(projectId: string, page = 1): Promise<PageResult<TaskView>> {
+export interface TaskFilter {
+  status?: TaskStatus
+  priority?: TaskPriority
+  assigneeId?: string
+}
+
+export interface AuditFilter {
+  actorId?: string
+  from?: string
+  to?: string
+  action?: string
+}
+
+export interface TaskStats {
+  total: number
+  todo: number
+  inProgress: number
+  inReview: number
+  done: number
+  overdue: number
+  completionRatePercent: number
+}
+
+export async function listTasks(
+  projectId: string,
+  page = 1,
+  filter: TaskFilter = {},
+): Promise<PageResult<TaskView>> {
   const response = await apiClient.get<ApiResponse<PageResult<TaskView>>>(
     `/projects/${projectId}/tasks`,
-    { params: { page } },
+    { params: { page, ...filter } },
   )
+  return response.data.data
+}
+
+export async function getTaskStats(projectId: string): Promise<TaskStats> {
+  const response = await apiClient.get<ApiResponse<TaskStats>>(`/projects/${projectId}/stats`)
   return response.data.data
 }
 
 export async function createTask(
   projectId: string,
-  input: { title: string; description?: string; assigneeId?: string; priority: TaskPriority },
+  input: {
+    title: string
+    description?: string
+    assigneeId?: string
+    priority: TaskPriority
+    dueAt?: string
+  },
 ): Promise<TaskView> {
   const response = await apiClient.post<ApiResponse<TaskView>>(
     `/projects/${projectId}/tasks`,
@@ -71,6 +109,8 @@ export async function editTask(
     assigneeId?: string
     unassign?: boolean
     priority?: TaskPriority
+    dueAt?: string
+    clearDueAt?: boolean
   },
 ): Promise<TaskView> {
   const response = await apiClient.patch<ApiResponse<TaskView>>(`/tasks/${id}`, input)
@@ -97,10 +137,14 @@ export async function listActivities(id: string, page = 1): Promise<PageResult<A
   return response.data.data
 }
 
-export async function listAudit(projectId: string, page = 1): Promise<PageResult<AuditView>> {
+export async function listAudit(
+  projectId: string,
+  page = 1,
+  filter: AuditFilter = {},
+): Promise<PageResult<AuditView>> {
   const response = await apiClient.get<ApiResponse<PageResult<AuditView>>>(
     `/projects/${projectId}/audit-logs`,
-    { params: { page } },
+    { params: { page, ...filter } },
   )
   return response.data.data
 }
