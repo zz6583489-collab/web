@@ -6,10 +6,18 @@ export interface ApiResponse<T> {
 }
 
 export interface UserView {
-  id: number
+  id: string
   username: string
   displayName: string
   email: string | null
+  systemAdmin: boolean
+}
+
+export interface PageResult<T> {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
 }
 
 export interface LoginView {

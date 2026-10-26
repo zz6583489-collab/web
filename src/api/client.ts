@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios'
-import type { ApiResponse } from '../types/api'
+import type { InternalAxiosRequestConfig } from 'axios'
+import type { ApiResponse, LoginView } from '../types/api'
 
 export class ApiError extends Error {
   constructor(
@@ -14,9 +15,20 @@ export class ApiError extends Error {
 }
 
 let accessToken: string | null = null
+let tokenObserver: ((token: string | null) => void) | null = null
+let refreshPromise: Promise<string> | null = null
+
+interface RetryableRequest extends InternalAxiosRequestConfig {
+  teamflowRetried?: boolean
+}
+
+export function observeAccessToken(observer: (token: string | null) => void): void {
+  tokenObserver = observer
+}
 
 export function setAccessToken(token: string | null): void {
   accessToken = token
+  tokenObserver?.(token)
 }
 
 export function normalizeApiError(error: unknown): ApiError {
@@ -34,13 +46,18 @@ export function normalizeApiError(error: unknown): ApiError {
   return new ApiError('CLIENT.ERROR', '操作失败，请稍后重试', undefined, undefined)
 }
 
+export function formatApiError(error: unknown): string {
+  const apiError = error instanceof ApiError ? error : normalizeApiError(error)
+  return `${apiError.message}${apiError.traceId ? `（TraceId：${apiError.traceId}）` : ''}`
+}
+
 export const apiClient = axios.create({
   baseURL: '/api/v1',
   timeout: 10000,
 })
 
 apiClient.interceptors.request.use((config) => {
-  if (accessToken) {
+  if (accessToken && config.url !== '/auth/refresh' && config.url !== '/auth/logout') {
     config.headers.Authorization = `Bearer ${accessToken}`
   }
   return config
@@ -48,5 +65,32 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: unknown) => Promise.reject(normalizeApiError(error)),
+  async (error: unknown) => {
+    if (error instanceof AxiosError && error.response?.status === 401) {
+      const request = error.config as RetryableRequest | undefined
+      if (request && !request.teamflowRetried && !request.url?.startsWith('/auth/')) {
+        request.teamflowRetried = true
+        try {
+          refreshPromise ??= apiClient
+            .post<ApiResponse<LoginView>>('/auth/refresh', null, {
+              headers: { 'X-TeamFlow-CSRF': '1' },
+            })
+            .then((response) => {
+              const token = response.data.data.accessToken
+              setAccessToken(token)
+              return token
+            })
+            .finally(() => {
+              refreshPromise = null
+            })
+          const token = await refreshPromise
+          request.headers.Authorization = `Bearer ${token}`
+          return apiClient.request(request)
+        } catch {
+          setAccessToken(null)
+        }
+      }
+    }
+    return Promise.reject(normalizeApiError(error))
+  },
 )
