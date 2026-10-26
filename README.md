@@ -2,6 +2,8 @@
 
 Vue 3 + TypeScript 前端已接入真实 `/api/v1`：登录与会话恢复、项目/成员、任务创建与流转、活动、审计、项目统计页及组合筛选。接口调用分别位于 `src/stores/auth.ts`、`src/views/projects/projectApi.ts` 和 `src/views/tasks/taskApi.ts`；统计页位于 `src/views/dashboard/ProjectDashboardView.vue`。
 
+页面通过路由懒加载，Element Plus 组件按页面自动引入。Loading 指令与消息样式显式注册；`vite.config.ts` 预优化当前使用的样式入口，避免首次打开懒加载页面时重新打包依赖。新增 Element Plus 组件时，同步更新该列表并运行冷启动联调。
+
 ## 最小前后端联调
 
 先启动独立的 MySQL 8.0.16+ 和 `server/` Spring Boot 服务，准备一个可登录的**测试账号**。在纯 HTTP 本地环境设置后端 `AUTH_COOKIE_SECURE=false`；不要把真实密码写入仓库。

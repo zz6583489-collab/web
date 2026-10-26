@@ -63,7 +63,9 @@ async function submit(): Promise<void> {
   }
 }
 
-async function toggle(user: AdminUser): Promise<void> {
+async function toggle(id: string): Promise<void> {
+  const user = users.value.find((entry) => entry.id === id)
+  if (!user) return
   const next = user.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE'
   try {
     await ElMessageBox.confirm(`确定将 ${user.username} 设为 ${next} 吗？`, '修改账号状态')
@@ -97,7 +99,7 @@ onMounted(() => {
         <el-table-column prop="status" label="状态" width="120" />
         <el-table-column label="操作" width="130"
           ><template #default="scope"
-            ><el-button link @click="toggle(scope.row)">{{
+            ><el-button link @click="toggle(String(scope.row.id))">{{
               scope.row.status === 'ACTIVE' ? '禁用' : '启用'
             }}</el-button></template
           ></el-table-column
