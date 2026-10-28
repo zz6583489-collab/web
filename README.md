@@ -1,6 +1,6 @@
 # TeamFlow Web
 
-Vue 3 + TypeScript 前端已接入真实 `/api/v1`：登录与会话恢复、项目/成员、任务创建与流转、活动、审计、项目统计页及组合筛选。接口调用分别位于 `src/stores/auth.ts`、`src/views/projects/projectApi.ts` 和 `src/views/tasks/taskApi.ts`；统计页位于 `src/views/dashboard/ProjectDashboardView.vue`。
+Vue 3 + TypeScript 前端已接入真实 `/api/v1`：登录与会话恢复、项目/成员、任务创建与流转、活动、审计、项目统计页、组合筛选和站内通知。接口调用分别位于 `src/stores/auth.ts`、`src/views/projects/projectApi.ts`、`src/views/tasks/taskApi.ts` 和 `src/views/notifications/notificationApi.ts`；通知入口位于 `src/views/notifications/NotificationCenter.vue`。
 
 页面通过路由懒加载，Element Plus 组件按页面自动引入。Loading 指令与消息样式显式注册；`vite.config.ts` 预优化当前使用的样式入口，避免首次打开懒加载页面时重新打包依赖。新增 Element Plus 组件时，同步更新该列表并运行冷启动联调。
 
@@ -18,8 +18,10 @@ $env:TEAMFLOW_E2E_PASSWORD = '<测试密码>'
 pnpm verify:integration
 ```
 
-`verify:integration` 自动在 `127.0.0.1:4173` 启动 Vite，将 `/api` 代理到**真实** Spring Boot。浏览器会依次登录、创建项目、筛选项目状态、创建并指派任务、流转任务，随后核对任务状态筛选、审计动作筛选与独立统计页的真实响应，并检查 390px 视口无页面横向溢出。测试创建唯一名称的项目和任务，因此只应指向隔离测试库。缺少后端或账号时命令失败，不会使用模拟数据。
+`verify:integration` 自动在 `127.0.0.1:4173` 启动 Vite。`live.e2e.ts` 将 `/api` 代理到**真实** Spring Boot，验证登录、项目、任务、筛选和统计；`design.e2e.ts` 使用模拟响应验证页面交互；提供下面的双账号变量时，`notification.e2e.ts` 再跑真实通知流程，否则跳过该用例。真实用例会创建唯一名称的项目和任务，因此只应指向隔离测试库。
 
 默认使用本机 Chrome；如需改用 Edge，可设置 `TEAMFLOW_E2E_BROWSER_CHANNEL=msedge`。测试浏览器未安装时，按 Playwright 提示安装对应浏览器。
+
+通知的双账号真实联调可单独执行 `pnpm exec playwright test e2e/notification.e2e.ts`。另需设置 `TEAMFLOW_E2E_OWNER_USERNAME`、`TEAMFLOW_E2E_MEMBER_USERNAME`、`TEAMFLOW_E2E_MEMBER_ID` 和 `TEAMFLOW_E2E_PASSWORD`，并确保后端 Flyway 已迁移至 V6。测试在隔离库创建项目和任务，通过前端登录、通知抽屉、未读数和任务跳转验证真实接口，不使用模拟响应。
 
 若后端在默认 `8080` 端口，改 `TEAMFLOW_API_ORIGIN` 即可。需要手动操作页面时，设置 `VITE_API_PROXY_TARGET` 后运行 `pnpm dev`，按终端给出的地址打开浏览器。权限和错误码见独立根仓库的 `docs/api.md`；Web 路由入口见 `src/router/index.ts`。

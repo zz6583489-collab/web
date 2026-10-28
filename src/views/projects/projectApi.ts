@@ -42,6 +42,14 @@ export async function createProject(name: string, description: string): Promise<
   return response.data.data
 }
 
+export async function updateProject(
+  id: string,
+  input: { name?: string; description?: string },
+): Promise<ProjectView> {
+  const response = await apiClient.patch<ApiResponse<ProjectView>>(`/projects/${id}`, input)
+  return response.data.data
+}
+
 export async function archiveProject(id: string): Promise<void> {
   await apiClient.post(`/projects/${id}/archive`)
 }

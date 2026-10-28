@@ -7,6 +7,7 @@ import 'element-plus/theme-chalk/el-message-box.css'
 import App from './App.vue'
 import router from './router'
 import './style.css'
+import './styles/design.css'
 
 const app = createApp(App)
 app.use(createPinia()).use(router)

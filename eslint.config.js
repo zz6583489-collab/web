@@ -7,7 +7,16 @@ import globals from 'globals'
 import vueParser from 'vue-eslint-parser'
 
 export default [
-  { ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'src/components.d.ts'] },
+  {
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'node_modules/**',
+      'test-results/**',
+      'playwright-report/**',
+      'src/components.d.ts',
+    ],
+  },
   js.configs.recommended,
   ...vue.configs['flat/recommended'],
   {
